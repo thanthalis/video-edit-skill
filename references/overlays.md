@@ -9,6 +9,10 @@ code file scroll) is delegated to its own sub-agent (Opus if available) working 
 2. Spawn one sub-agent per insert (Agent tool, `model: opus`, `run_in_background: true`), all in parallel.
 3. Each agent builds a standalone HyperFrames project in `<project>/agents/<name>/` and renders a TRANSPARENT VP9 WebM
    at a fixed size and duration. The main build places it with a wrapper div (position/scale/tilt) and a timed `<video>`.
+   **Windows:** do not layer the transparent WebM in the HTML. An alpha WebM (or HDR phone footage) pushes the render onto
+   a path that drops every HTML layer there (see gotchas, Windows). Bake the insert into the base video with ffmpeg
+   instead (`overlay` with `-c:v libvpx-vp9` before the WebM input, placed and scaled with the same numbers the wrapper
+   div would use, `enable='between(t,IN,OUT)'`), render with `--sdr`, and check frames from the real render.
 4. When an agent reports back, read its notes (things it flags as "might look off" are usually real, e.g. a grid
    thumbnail with an off-brand title). Send fixes back with SendMessage instead of redoing the work.
 
