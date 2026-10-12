@@ -5,7 +5,7 @@ Usage:  PY lint_edl.py <project_dir>
 Reads each source's audio (work/<clip>.wav from islands.py, else extracts it) and, when present,
 work/words_<clip>_islands.json for word names in the notes.
 Rule (local patch, tuned on a real reel): a cut must sit in a pause or in the dip between two words, at least 10 dB
-under the clip's speech median. OK / CHECK (dip within 60 ms, move the point there) / UNSAFE (out-point with no dip: chops a sound; an in-point
+under the median of the clip's speech frames. OK / CHECK (dip within 60 ms, move the point there) / UNSAFE (out-point with no dip: chops a sound; an in-point
 with no dip is only CHECK, tuned by ear).
 Exit code 1 when any edge is UNSAFE. assemble.py already puts a 20/30 ms audio fade on every join.
 """
@@ -34,6 +34,17 @@ def energy(proj, clip, src):
         a = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32) / 32768
     n = len(a) // 160
     return 20 * np.log10(np.sqrt(np.mean(a[:n * 160].reshape(n, 160) ** 2, axis=1) + 1e-12))
+
+
+def dip_level(db):
+    """dB under which a frame counts as a pause / word gap: 10 dB under the median of the SPEECH frames (frames 10 dB+
+    over the room floor). A median over the whole clip measures the silence when pauses fill more than half of it."""
+    import numpy as np
+    floor = float(np.percentile(db, 10))
+    talk = db[db > floor + 10]
+    if len(talk) < max(10, len(db) // 20):     # (almost) no speech: anything near the floor is a pause
+        return floor + 6
+    return max(float(np.median(talk)) - 10, floor + 6)
 
 
 def edge(t, db, gap, words, side):
@@ -81,7 +92,7 @@ def main():
         if c not in cache:
             db = energy(proj, c, src[c])
             wp = os.path.join(work, f'words_{c}_islands.json')
-            cache[c] = (db, float(np.percentile(db, 50)) - 10, load(wp) if os.path.exists(wp) else [])
+            cache[c] = (db, dip_level(db), load(wp) if os.path.exists(wp) else [])
         db, gap, words = cache[c]
         for side, t in (('in', s['in']), ('out', s['out'])):
             level, why = edge(t, db, gap, words, side)

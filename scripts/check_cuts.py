@@ -45,10 +45,14 @@ if '--strip' in sys.argv:
     dur = probe_duration(render)
     rows, sdir = [], os.path.join(proj, 'work', 'strips')
     os.makedirs(sdir, exist_ok=True)
-    spots = [('start', 0.0, 2.0)] + [(s['id'], s['frame'] / 30 - 1.5, 3.0) for s in segs[1:]] + [('end', max(dur - 2.0, 0), 2.0)]
-    for k, (name, t0, span) in enumerate(spots):
+    spots = ([('start', 0.0, 2.0, None)] + [(s['id'], s['frame'] / 30 - 1.5, 3.0, s['frame'] / 30) for s in segs[1:]]
+             + [('end', max(dur - 2.0, 0), 2.0, None)])
+    for k, (name, t0, span, cut) in enumerate(spots):
+        end = min(t0 + span, dur)
         t0 = max(t0, 0.0)
-        span = min(span, dur - t0)
+        span = end - t0
+        # the red line sits at the real cut time, also when the window is clamped at the start or end of the render
+        mark = '' if cut is None else f',drawbox=x={min(max(round((cut - t0) / span * 720) - 2, 0), 716)}:y=0:w=4:h=60:color=red@0.8:t=fill'
         fr = []
         for j in range(6):
             p = os.path.join(sdir, f'r{k}_{j}.png')
@@ -57,13 +61,13 @@ if '--strip' in sys.argv:
             fr.append(p)
         wave = os.path.join(sdir, f'r{k}_wave.png')
         subprocess.run([FF, '-loglevel', 'error', '-y', '-ss', f'{t0:.3f}', '-t', f'{span:.3f}', '-i', render, '-filter_complex',
-                        'aformat=channel_layouts=mono,showwavespic=s=720x60:colors=white,drawbox=x=358:y=0:w=4:h=60:color=red@0.8:t=fill',
+                        'aformat=channel_layouts=mono,showwavespic=s=720x60:colors=white' + mark,
                         '-frames:v', '1', wave], check=True)
         row = os.path.join(sdir, f'row{k}.png')
         ins = sum((['-i', p] for p in fr + [wave]), [])
         subprocess.run([FF, '-loglevel', 'error', '-y', *ins, '-filter_complex', 'hstack=6[f];[f][6]vstack', row], check=True)
         rows.append(row)
-        print(f'row {k + 1}: {name} {t0:.2f}-{t0 + span:.2f}s' + ('  (cut = red line in the middle)' if name not in ('start', 'end') else ''))
+        print(f'row {k + 1}: {name} {t0:.2f}-{t0 + span:.2f}s' + (f'  (cut at {cut:.2f}s = red line)' if cut is not None else ''))
     strips = os.path.join(proj, 'work', 'cut_strips.jpg')
     ins = sum((['-i', p] for p in rows), [])
     subprocess.run([FF, '-loglevel', 'error', '-y', *ins, '-filter_complex', f'vstack={len(rows)}' if len(rows) > 1 else 'null', strips], check=True)
