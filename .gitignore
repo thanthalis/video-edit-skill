@@ -7,3 +7,7 @@ assets/template/assets/sfx/*.part
 *.log
 .DS_Store
 node_modules/
+
+# personal style (local only, never published)
+house-rules.md
+looks/

@@ -12,6 +12,7 @@
 > - **Renderfix voor Windows**: renderen met `--sdr`, en een uitgeknipte persoon wordt vooraf in de video gebakken. Anders
 >   verdwijnen alle woorden uit de render bij HDR-gsmbeelden.
 > - **Euh-detectie** en een samenvoegstap die niets laat vallen als je clips van verschillende opnames mengt.
+> - **Je eigen stijl**: bij de eerste start helpt Claude je een `house-rules.md` te maken op basis van reels die je goed vindt. Dat bestand blijft lokaal en stuurt elke volgende edit. Extra technieken (hook met achtergrondwissel, voorproefje naar de volgende clip, whip met woorden, nep-tweede-camera) staan in `references/techniques.md`.
 > - Getest op Windows 11 met een 8K-clip van een gsm.
 >
 > Installeren: plak in Claude Code `Install this skill for me: https://github.com/thanthalis/video-edit-skill` en typ daarna `/video-edit`.

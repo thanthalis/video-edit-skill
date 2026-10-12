@@ -8,6 +8,11 @@ description: "Turns raw 9:16 talking-head clips into a finished, premium Instagr
 Raw clips in, finished reel out. The user never opens an editor: they review a phone copy and give notes; every
 round is a ~2 minute re-render.
 
+**House rules first (every run).** If `SK/house-rules.md` exists, read it before anything else: it is the user's own
+style (default look, colours, grade, structure, process) and it overrides the look defaults below. It may point to a
+local look template under `SK/looks/<name>/build.py`; use that instead of `assets/template/build.py`. Both are personal
+and gitignored. No house rules yet: offer the style step in Step 0 once, unless config.json has `"styleStep": "skipped"`.
+
 Read before building: `references/looks.md` (the three looks, exact values), `references/layout.md` (safe zone,
 placement, behind-head formula), `references/gotchas.md` (every trap already hit once). Read
 `references/overlays.md` when the script calls for an animated insert.
@@ -60,7 +65,20 @@ and go to Step 1 once it prints READY.
    {"name": "...", "instagram": "handle-without-@", "defaultLook": "bold", "clipsDir": "~/Downloads",
     "projectsDir": "~/reel-edits", "language": "nl", "approvalGates": true, "setupComplete": true, "setupDate": "YYYY-MM-DD"}
    ```
-6. Say: "Setup complete! Running /video-edit now..." and continue.
+6. **Your own style (optional, recommended).** Say that the three looks are a starting point and that the edit gets
+   much better with the user's own style pattern. Offer three choices: make it now, after the first reel, or skip.
+   **Skip is a full answer:** use the chosen default look, save `"styleStep": "skipped"` in `SK/config.json`, and never
+   bring it up again on later runs. The user can still ask for it any time ("make my style", "maak mijn stijl").
+   To make it:
+   - Ask for 2 to 5 references: their own best reels, reels they like, or screenshots (drop them in `<project>/refs/`).
+     Pull frames and describe the style back in 5 bullets (captions, type, colour accent, motion, pacing); wait for OK.
+   - Ask for their font and accent colour (or derive them from the references), how much grade they like, and which
+     techniques from `references/techniques.md` fit them.
+   - Write `SK/house-rules.md` with sections Look, Colour, Structure, Cutting, Process and an empty "Learned rules".
+     Never copy another creator's identity; describe the user's own.
+   - Optionally suggest saving the same rules as a design system in Claude Design so other Claude surfaces use them.
+   - After the first approved reel, offer to save its build as `SK/looks/<name>/build.py` and point house-rules to it.
+7. Say: "Setup complete! Running /video-edit now..." and continue.
 
 ## This machine (read on every run)
 
@@ -154,7 +172,11 @@ duration, beats locked to the word times, transparent webm out. Keep building th
 Copy `SK/assets/template/` into the project (build.py, hyperframes.json, package.json, assets/fonts, assets/sfx),
 then adapt build.py. It is the finished build of a real reel: keep the machinery, rewrite the content (its
 docstring lists which is which).
-- Which look where: `defaultLook` for the whole reel; a line that names a look switches its section.
+- Which look where: the house-rules look when there is one, else `defaultLook`; a line that names a look switches
+  its section. Techniques beyond the looks (preview card, whip + word chips, fake second camera, baked background
+  swap, hook question): `references/techniques.md`.
+- **Learning loop:** when the user gives the same kind of note twice, add it as a dated line under "Learned rules" in
+  `SK/house-rules.md` (create the file if needed), so the next reel starts right.
 - Orbit and profile grid use the user's own reels (overlays.md: Apify post scraper with their handle, or files they
   drop into `assets/reels/`).
 - Iterate from the project folder: `HF lint` (0 errors), then `PY build.py --safe`, then
