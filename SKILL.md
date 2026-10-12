@@ -66,7 +66,7 @@ the extra-checks question from step 7 below once, save the answer, then continue
    {"name": "...", "instagram": "handle-without-@", "defaultLook": "bold", "clipsDir": "~/Downloads",
     "projectsDir": "~/reel-edits", "language": "nl", "approvalGates": true, "cutChecks": true, "setupComplete": true, "setupDate": "YYYY-MM-DD"}
    ```
-6. **Your own style (optional, recommended).** Say that the three looks are a starting point and that the edit gets
+6. **Your own style (optional, recommended).** In the user's language, say that the three looks are a starting point and that the edit gets
    much better with the user's own style pattern. Offer three choices: make it now, after the first reel, or skip.
    **Skip is a full answer:** use the chosen default look, save `"styleStep": "skipped"` in `SK/config.json`, and never
    bring it up again on later runs. The user can still ask for it any time ("make my style", "maak mijn stijl").
@@ -79,7 +79,7 @@ the extra-checks question from step 7 below once, save the answer, then continue
      Never copy another creator's identity; describe the user's own.
    - Optionally suggest saving the same rules as a design system in Claude Design so other Claude surfaces use them.
    - After the first approved reel, offer to save its build as `SK/looks/<name>/build.py` and point house-rules to it.
-7. **Extra cut checks (optional, new).** Ask once, in plain words: "Do you want me to check extra for clipped words,
+7. **Extra cut checks (optional, new).** Ask once, in plain words and in the user's language (Dutch by default): "Do you want me to check extra for clipped words,
    leftover 'euh's and audio that is too quiet? It is new and can sometimes be a bit strict. (yes / no)". Save the
    answer as `"cutChecks": true` or `false` and never ask again. The user can switch it any time ("extra checks on/off",
    "extra controles aan/uit"). With `false` the skill runs exactly as before: skip islands.py, lint_edl.py and
