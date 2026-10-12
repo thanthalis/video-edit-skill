@@ -1,6 +1,18 @@
 # Video Edit
 ### A Claude Code Skill by [@tenfoldmarc](https://www.instagram.com/tenfoldmarc)
 
+> **Fork met Nederlandse ondersteuning** door [Jelle Eeckhaut](https://github.com/thanthalis), met toestemming van @tenfoldmarc.
+> Alle credits voor de skill zelf gaan naar [tenfoldmarc/video-edit-skill](https://github.com/tenfoldmarc/video-edit-skill).
+>
+> Wat deze fork toevoegt:
+> - **Elke taal, standaard Nederlands.** Het origineel gebruikt alleen Engelse Whisper-modellen. Hier kies je de taal met `"language"` in `config.json` (standaard `"nl"`), met het meertalige `large-v3-turbo`.
+> - **Rotatiefix voor gsm-video.** Verticale gsm-clips met rotatie-metadata werden verkeerd uitgesneden bij punch-ins.
+> - **Twee stopmomenten.** Claude toont de knip-lijst en de snapshots en wacht op je akkoord (zet `"approvalGates": false` om door te laten lopen).
+> - **Controle op afgeknipte woorden** na het samenstellen, en **snelle correcties**: alleen gewijzigde segmenten worden opnieuw gecodeerd.
+> - Getest op Windows 11 met een 8K-clip van een gsm.
+>
+> Installeren: plak in Claude Code `Install this skill for me: https://github.com/thanthalis/video-edit-skill` en typ daarna `/video-edit`.
+
 Film your talking-head clips on your phone, drop them in a folder, type `/video-edit`, and Claude turns them into a finished Instagram reel. It picks your best take of every line, cuts the dead air, cuts you out of the background so words can sit behind your head, and applies a designed look with captions, motion graphics and sound. You never open an editor: you watch the result, say what you want changed, and it re-renders in about two minutes.
 
 ---

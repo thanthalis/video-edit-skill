@@ -33,6 +33,7 @@ and go to Step 1 once it prints READY.
    - Your Instagram handle (for your profile insert and to pull your reels for the orbit effect)
    - Default look: **bold** (kinetic words behind your head), **cool girl** (warm, yellow serif italic, your reels
      orbiting you) or **cool dude** (dark editorial, tracked caps + serif). Offer bold if they are unsure.
+   - The language you speak in your videos (default Dutch, `nl`; English is `en`)
    - Where your raw clips usually land (default `~/Downloads`) and where projects should live (default `~/reel-edits`)
 3. Run the setup script with whichever Python the machine has. Try these in order until one prints STATUS lines:
    `python3 "SK/scripts/setup.py"`, then `python "SK/scripts/setup.py"`, then `py -3 "SK/scripts/setup.py"`.
@@ -57,7 +58,7 @@ and go to Step 1 once it prints READY.
 5. Save `SK/config.json` (no secrets, ever):
    ```json
    {"name": "...", "instagram": "handle-without-@", "defaultLook": "bold", "clipsDir": "~/Downloads",
-    "projectsDir": "~/reel-edits", "setupComplete": true, "setupDate": "YYYY-MM-DD"}
+    "projectsDir": "~/reel-edits", "language": "nl", "approvalGates": true, "setupComplete": true, "setupDate": "YYYY-MM-DD"}
    ```
 6. Say: "Setup complete! Running /video-edit now..." and continue.
 
@@ -81,6 +82,12 @@ One command style that works in zsh, bash, Git Bash and PowerShell:
   front: `& "PY" "SK/scripts/ingest.py" "<project>"`.
 - One command per call. No `&&`, no `VAR=1 command`, no `~` inside arguments, no `source`, no `zsh`.
 - `ffmpeg` and `ffprobe` are on PATH on every OS (setup checks it), so one-off ffmpeg commands are the same everywhere.
+
+## Language (local patch)
+Speech language comes from `language` in config.json (default `nl`). Non-English uses the multilingual
+`large-v3-turbo` with the language forced (see `skillenv.whisper_settings`). On-screen text, captions and inserts are
+written in that language too. Whisper mangles Flemish names and brands: always pass them in the prompt of
+`transcribe_cut.py` and fix captions from what was actually said.
 
 ## Hard rules
 1. Everything inside the Reels safe zone: top 220, bottom 450 (nothing below y 1470), sides 35, right 100 from y 1155.
@@ -114,9 +121,11 @@ Look at `work/sheets.jpg` (setups and angles) and read `transcript.txt` (per-cli
   last word. Kill dead air between sections; confirm short pauses with silencedetect before trimming (Whisper can
   invent a leading word at a cut).
 - Two segments in a row from the same angle: punch one in (zoom 1.3-1.9 from the 4K original, cx/cy on the chest).
-- Unsure words (keyword, CTA trigger): re-transcribe that snippet with medium.en and a prompt containing the names.
+- Unsure words (keyword, CTA trigger): re-transcribe that snippet with the model from `skillenv.whisper_settings('cut')` and a prompt containing the names.
 - Format: `[{"id": "hook", "clip": "c1", "in": 12.66, "out": 15.72, "zoom": 1.0, "cx": 0.5, "cy": 0.5, "line": "..."}]`
-- Post the EDL to the user as a short table (line, clip, look per section) and keep going; do not wait.
+- Post the EDL to the user as a short table (line kept, what is cut and why, clip, look per section).
+  **Approval gate 1 (local patch):** if `approvalGates` in config.json is true (the default when missing), WAIT for
+  the user's OK before assembling. If it is false, keep going without waiting.
 
 ### 4. Assemble, transcribe, cut out
 ```bash
@@ -126,6 +135,11 @@ PY SK/scripts/cutout.py <project>                   # run in background; asserts
 PY SK/scripts/headpos.py <project>                  # after the cutout: head/body position per segment
 ```
 One cutout at a time (about 1.5 GB of RAM). It prints a progress line every 30 seconds.
+
+**Clipped-word check (local patch, always):** compare `words.json` from `transcribe_cut.py` with the EDL lines. Whisper's
+word times on the raw clip can be ~0.5s off, so an out-point can land inside a word ("uitkomen" came out as "gaat.").
+If a line's last or first word is missing, move that in/out to the next real silence (silencedetect) and re-assemble;
+`assemble.py` re-encodes only the segments that changed.
 
 ### 5. Inserts in parallel (as soon as the EDL is locked)
 For each animated insert the script calls for (an app on screen, the profile follow on the CTA, a file scroll),
@@ -144,6 +158,9 @@ docstring lists which is which).
   and safe zone. (`HF` picks the right Node by itself, so there is no `nvm use`.)
   A build.py copied from an older version of this skill ignores `--safe`: if the red guide is missing from the
   snapshots, build that project the old way, `SAFE=1 "PY" build.py` (such projects only exist on Mac and Linux).
+
+**Approval gate 2 (local patch):** with `approvalGates` true, show the user the contact sheets (with the safe guide)
+and WAIT for their OK before the full render.
 
 ### 7. Render and QA
 ```bash

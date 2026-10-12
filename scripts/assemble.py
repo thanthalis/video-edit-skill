@@ -22,9 +22,14 @@ FF, FP = skillenv.tool('ffmpeg'), skillenv.tool('ffprobe')
 
 
 def size(f):
-    w, h = subprocess.run([FP, '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f],
-                          **skillenv.TEXT).stdout.strip().split(',')[:2]
-    return int(w), int(h)
+    """Displayed size: phones store portrait video as landscape + a rotation tag, and ffmpeg autorotates before
+    the crop filter runs, so a +-90 rotation swaps width and height (local patch)."""
+    r = json.loads(subprocess.run([FP, '-v', 'error', '-select_streams', 'v:0', '-show_entries',
+                                   'stream=width,height:stream_side_data=rotation', '-of', 'json', f], **skillenv.TEXT).stdout)
+    st = r['streams'][0]
+    w, h = int(st['width']), int(st['height'])
+    rot = next((int(sd.get('rotation', 0)) for sd in st.get('side_data_list', []) if 'rotation' in sd), 0)
+    return (h, w) if abs(rot) % 180 == 90 else (w, h)
 
 
 def crop(z, cx, cy, sw, sh):
@@ -61,11 +66,20 @@ def main():
         # vertical fill: scale to cover 1080x1920 then centre-crop (handles 4K 9:16 and odd phone sizes)
         vf = (f"{crop(s.get('zoom', 1), s.get('cx', .5), s.get('cy', .5), sw, sh)}"
               'scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=30')
-        subprocess.run([FF, '-loglevel', 'error', '-y', '-ss', f"{s['in']:.3f}", '-t', f'{d:.3f}', '-i', f,
-                        '-map', '0:v:0', '-map', '0:a:0', '-vf', vf,
-                        '-af', f'afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03',   # no clicks at the joins
-                        '-c:v', 'libx264', '-crf', '14', '-preset', 'medium', '-pix_fmt', 'yuv420p',
-                        '-c:a', 'pcm_s16le', '-ar', '48000', out], check=True)
+        # local patch: reuse a segment whose source, in/out and filter did not change (8K phone files take
+        # minutes per segment to decode, so a one-cut fix should not re-encode the whole reel)
+        key = json.dumps([f, round(s['in'], 3), round(d, 3), vf])
+        stamp = out + '.key'
+        reuse = os.path.exists(out) and os.path.exists(stamp) and open(stamp, encoding='utf-8').read() == key
+        if not reuse:
+            subprocess.run([FF, '-loglevel', 'error', '-y', '-ss', f"{s['in']:.3f}", '-t', f'{d:.3f}', '-i', f,
+                            '-map', '0:v:0', '-map', '0:a:0', '-vf', vf,
+                            '-af', f'afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03',   # no clicks at the joins
+                            '-c:v', 'libx264', '-crf', '14', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+                            '-c:a', 'pcm_s16le', '-ar', '48000', out], check=True)
+            with open(stamp, 'w', encoding='utf-8') as fh:
+                fh.write(key)
+        print(f"seg {k} {s['id']}: {'reused' if reuse else 'encoded'}", flush=True)
         parts.append(out)
         meta.append({**s, 'src_in': s['in'], 'src_out': s['out']})
     # the list holds bare file names (resolved next to concat.txt), so no drive letters or backslashes end up in it

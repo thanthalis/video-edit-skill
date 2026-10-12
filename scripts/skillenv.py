@@ -151,6 +151,26 @@ def utf8_stdio():
             pass
 
 
+# ------------------------------------------------------------------ whisper (local patch: non-English speech)
+def whisper_settings(stage, skill_dir=SKILL_DIR):
+    """(model, language) for faster-whisper. stage: 'ingest' (raw takes) or 'cut' (final captions).
+    Reads "language" (default "nl") and optional "whisperModel" from config.json. English keeps the upstream
+    .en models; any other language uses the multilingual large-v3-turbo with the language forced, because the
+    .en models turn Dutch into English gibberish and auto-detect sometimes guesses German or Afrikaans."""
+    cfg = {}
+    try:
+        with open(os.path.join(skill_dir, 'config.json'), encoding='utf-8') as fh:
+            cfg = json.load(fh)
+    except (OSError, ValueError):
+        pass
+    lang = (cfg.get('language') or 'nl').lower()
+    if cfg.get('whisperModel'):
+        return cfg['whisperModel'], (None if lang == 'en' and cfg['whisperModel'].endswith('.en') else lang)
+    if lang == 'en':
+        return ('small.en' if stage == 'ingest' else 'medium.en'), None
+    return 'large-v3-turbo', lang
+
+
 # ------------------------------------------------------------------ tools
 def _exe(name, osn):
     return name + '.exe' if osn == 'windows' else name

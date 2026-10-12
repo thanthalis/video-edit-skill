@@ -73,12 +73,13 @@ def main():
     stack = ['-filter_complex', f'vstack={len(sheets)}'] if len(sheets) > 1 else []
     subprocess.run([FF, '-loglevel', 'error', '-y', *ins, *stack, os.path.join(work, 'sheets.jpg')], check=True)
 
-    m = WhisperModel('small.en', compute_type='int8')
+    model, lang = skillenv.whisper_settings('ingest')
+    m = WhisperModel(model, compute_type='int8')
     lines = []
     for cid, f in sources.items():
         wav = os.path.join(work, f'{cid}.wav')
         subprocess.run([FF, '-loglevel', 'error', '-y', '-i', f, '-vn', '-ac', '1', '-ar', '16000', wav], check=True)
-        segs, _ = m.transcribe(wav, word_timestamps=True, vad_filter=False)
+        segs, _ = m.transcribe(wav, word_timestamps=True, vad_filter=False, language=lang)
         words = []
         lines.append(f'===== {cid}  {os.path.basename(f)}')
         for s in segs:
