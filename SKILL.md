@@ -131,6 +131,9 @@ written in that language too. Whisper mangles Flemish names and brands: always p
 PY SK/scripts/ingest.py <project> <clips or folder> [--newest 5]
 ```
 Look at `work/sheets.jpg` (setups and angles) and read `transcript.txt` (per-clip lines, words with times, speech map).
+Then per clip (local patch): `PY SK/scripts/islands.py <project> <clip> "<names>"` splits the clip at its silences and
+transcribes each island alone (fillers kept). `work/takes_<clip>.tsv` proposes keep / CUT (no speech, fillers only, false
+start) / CHECK (retake, filler inside) per island. Use it to pick takes; show the CUT/CHECK rows in the gate-1 table.
 
 ### 3. Pick takes -> `<project>/edl.json`
 - Rebuild the script from the takes: people repeat a line until it lands. Use the LAST complete clean take unless
@@ -142,6 +145,10 @@ Look at `work/sheets.jpg` (setups and angles) and read `transcript.txt` (per-cli
 - Unsure words (keyword, CTA trigger): re-transcribe that snippet with the model from `skillenv.whisper_settings('cut')` and a prompt containing the names.
 - Format: `[{"id": "hook", "clip": "c1", "in": 12.66, "out": 15.72, "zoom": 1.0, "cx": 0.5, "cy": 0.5, "line": "..."}]`
 - Post the EDL to the user as a short table (line kept, what is cut and why, clip, look per section).
+- Before posting it, run `PY SK/scripts/lint_edl.py <project>`: every in/out must sit in a pause or in the dip between
+  two words (10 dB+ under the clip's speech median). OK / CHECK (a dip is within 60 ms: move the point there) / UNSAFE
+  (no dip: the cut chops a sound; move it or cut the two-word phrase differently). Fast talkers rarely leave 0.4s
+  pauses, so a word-gap dip is a valid cut point; a long-silence rule flagged 16 of 20 approved cuts on the test reel.
   **Approval gate 1 (local patch):** if `approvalGates` in config.json is true (the default when missing), WAIT for
   the user's OK before assembling. If it is false, keep going without waiting.
 
@@ -194,6 +201,12 @@ PY build.py           # without --safe
 HF render -o renders/<slug>-vN.mp4 --quality high --sdr   # ~1.5-2 min for a 25s reel on Apple Silicon (--sdr: see gotchas, Windows)
 PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --phone
 ```
+Then `PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --strip` (local patch): `work/cut_strips.jpg` has one
+row per cut (6 frames over -1.5..+1.5s, waveform below, cut = red line) plus the first and last 2s, and it prints
+duration vs cut list and loudness. Hand the strip to a critic sub-agent whose only job is to find problems (clipped
+word in the waveform, jump in framing, leftover caption, frozen frame, silence gap, blink-cut mid-word). Fix and
+re-check at most 3 times; whatever is still wrong after that goes to the user as a list, not a 4th silent pass.
+Loudness for Reels: about -14 LUFS, true peak under -1 dBTP (v4 of the test reel was -19.4: too quiet).
 Look at `work/cut_check.jpg`: every after-cut frame shows the new shot cleanly. Check audio peaks (`volumedetect`,
 max around -2 to -5 dB) and the silence at section joins.
 
