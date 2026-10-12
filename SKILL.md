@@ -136,6 +136,10 @@ PY SK/scripts/headpos.py <project>                  # after the cutout: head/bod
 ```
 One cutout at a time (about 1.5 GB of RAM). It prints a progress line every 30 seconds.
 
+**Fillers (local patch):** Whisper drops "euh" by default, so cuts made on its words keep them. Transcribe with
+`initial_prompt` full of fillers ("Euh, ehm, eh...") and `suppress_tokens=[]` to find them, then cut them; keep one
+only when the user wants it (a natural or funny one).
+
 **Clipped-word check (local patch, always):** compare `words.json` from `transcribe_cut.py` with the EDL lines. Whisper's
 word times on the raw clip can be ~0.5s off, so an out-point can land inside a word ("uitkomen" came out as "gaat.").
 If a line's last or first word is missing, move that in/out to the next real silence (silencedetect) and re-assemble;
@@ -165,7 +169,7 @@ and WAIT for their OK before the full render.
 ### 7. Render and QA
 ```bash
 PY build.py           # without --safe
-HF render -o renders/<slug>-vN.mp4 --quality high      # ~1.5-2 min for a 25s reel on Apple Silicon
+HF render -o renders/<slug>-vN.mp4 --quality high --sdr   # ~1.5-2 min for a 25s reel on Apple Silicon (--sdr: see gotchas, Windows)
 PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --phone
 ```
 Look at `work/cut_check.jpg`: every after-cut frame shows the new shot cleanly. Check audio peaks (`volumedetect`,

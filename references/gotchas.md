@@ -41,6 +41,13 @@
 - Pinterest/Instagram pages block logged-out browsing; curl the page HTML or use Apify.
 
 ## Windows (same skill, different shell)
+- **Render drops every HTML layer** (words, images, cards) while snapshots look right: phone footage is often HDR
+  (HLG), and an alpha WebM (the cutout) also pushes the renderer onto the "layered composite" path, which on Windows
+  (hyperframes 0.8.34) rendered video only. Always render with `--sdr`, and bake an alpha cutout plus whatever sits
+  behind it (new background, behind-head word) into the video with ffmpeg (`overlay` with `-c:v libvpx-vp9` before
+  the WebM input) instead of layering the WebM in HTML. Check frames pulled from the real render, never only snapshots.
+- **Mixed clips lose a segment**: two phones or settings (different HDR/colour headers) made the ffmpeg concat
+  demuxer silently drop a whole segment. `assemble.py` now uses the concat filter, which decodes each segment alone.
 - Claude Code on Windows runs commands in Git Bash when Git for Windows is installed, otherwise in PowerShell, and
   both can be available at once. Write commands that work in both: full paths in double quotes with forward
   slashes, one command per call, no `&&`, no `VAR=1 cmd`, no `~` in arguments. In PowerShell start a quoted program

@@ -10,6 +10,7 @@ Writes segments.json with each segment's first frame in the cut ("frame") and fr
 Why the CFR re-encode: ffmpeg concat leaves a 0.033s video start offset and timestamp gaps; `hyperframes remove-background`
 then duplicates frames and the cutout drifts out of sync with the base video by the end. setpts=N/30 fixes it.
 """
+import hashlib
 import json
 import os
 import subprocess
@@ -62,13 +63,14 @@ def main():
         f = src[s['clip']]
         sw, sh = size(f)
         d = s['out'] - s['in']
-        out = os.path.join(work, f'seg_{k}.mp4')
         # vertical fill: scale to cover 1080x1920 then centre-crop (handles 4K 9:16 and odd phone sizes)
         vf = (f"{crop(s.get('zoom', 1), s.get('cx', .5), s.get('cy', .5), sw, sh)}"
               'scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,crop=1080:1920,fps=30')
         # local patch: reuse a segment whose source, in/out and filter did not change (8K phone files take
         # minutes per segment to decode, so a one-cut fix should not re-encode the whole reel)
         key = json.dumps([f, round(s['in'], 3), round(d, 3), vf])
+        # named by content, so reordering or inserting segments reuses every unchanged one
+        out = os.path.join(work, f"seg_{hashlib.sha1(key.encode('utf-8')).hexdigest()[:12]}.mp4")
         stamp = out + '.key'
         reuse = os.path.exists(out) and os.path.exists(stamp) and open(stamp, encoding='utf-8').read() == key
         if not reuse:
@@ -86,10 +88,14 @@ def main():
     concat = os.path.join(work, 'concat.txt')
     with open(concat, 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(''.join(skillenv.concat_entry(os.path.basename(p)) for p in parts))
-    subprocess.run([FF, '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', concat,
-                    '-vf', 'setpts=N/30/TB', '-r', '30', '-fps_mode', 'cfr', '-af', 'asetpts=PTS-STARTPTS',
+    # local patch: the concat FILTER decodes every segment on its own. The concat demuxer silently dropped a whole
+    # segment (133 frames) when clips from two phones/settings were mixed (different HDR/colour headers).
+    ins = sum((['-i', os.path.basename(p)] for p in parts), [])
+    graph = ''.join(f'[{k}:v:0][{k}:a:0]' for k in range(len(parts))) + f'concat=n={len(parts)}:v=1:a=1[v][a];[v]setpts=N/30/TB[vo]'
+    subprocess.run([FF, '-loglevel', 'error', '-y', *ins, '-filter_complex', graph, '-map', '[vo]', '-map', '[a]',
+                    '-r', '30', '-fps_mode', 'cfr',
                     '-c:v', 'libx264', '-crf', '14', '-preset', 'medium', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p',
-                    '-c:a', 'aac', '-b:a', '192k', aroll], check=True)
+                    '-c:a', 'aac', '-b:a', '192k', aroll], check=True, cwd=work)
     fr = 0
     for k, m in enumerate(meta):
         n = frames(parts[k])

@@ -9,9 +9,13 @@
 > - **Rotatiefix voor gsm-video.** Verticale gsm-clips met rotatie-metadata werden verkeerd uitgesneden bij punch-ins.
 > - **Twee stopmomenten.** Claude toont de knip-lijst en de snapshots en wacht op je akkoord (zet `"approvalGates": false` om door te laten lopen).
 > - **Controle op afgeknipte woorden** na het samenstellen, en **snelle correcties**: alleen gewijzigde segmenten worden opnieuw gecodeerd.
+> - **Renderfix voor Windows**: renderen met `--sdr`, en een uitgeknipte persoon wordt vooraf in de video gebakken. Anders
+>   verdwijnen alle woorden uit de render bij HDR-gsmbeelden.
+> - **Euh-detectie** en een samenvoegstap die niets laat vallen als je clips van verschillende opnames mengt.
 > - Getest op Windows 11 met een 8K-clip van een gsm.
 >
 > Installeren: plak in Claude Code `Install this skill for me: https://github.com/thanthalis/video-edit-skill` en typ daarna `/video-edit`.
+> Lukt dat niet (bv. geen git op Windows)? Vraag dan in Claude Code: `Download https://github.com/thanthalis/video-edit-skill/archive/refs/heads/main.zip, pak hem uit naar ~/.claude/skills/video-edit en voer daarna /video-edit uit.` Let op: dit werkt in **Claude Code** (tabblad Code van de desktop-app), niet in de gewone Claude-chat.
 
 Film your talking-head clips on your phone, drop them in a folder, type `/video-edit`, and Claude turns them into a finished Instagram reel. It picks your best take of every line, cuts the dead air, cuts you out of the background so words can sit behind your head, and applies a designed look with captions, motion graphics and sound. You never open an editor: you watch the result, say what you want changed, and it re-renders in about two minutes.
 
