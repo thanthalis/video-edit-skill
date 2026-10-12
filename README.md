@@ -13,6 +13,11 @@
 >   verdwijnen alle woorden uit de render bij HDR-gsmbeelden.
 > - **Euh-detectie** en een samenvoegstap die niets laat vallen als je clips van verschillende opnames mengt.
 > - **Je eigen stijl**: bij de eerste start helpt Claude je een `house-rules.md` te maken op basis van reels die je goed vindt. Dat bestand blijft lokaal en stuurt elke volgende edit. Extra technieken (hook met achtergrondwissel, voorproefje naar de volgende clip, whip met woorden, nep-tweede-camera) staan in `references/techniques.md`.
+> - **Extra knipcontroles (nieuw, optioneel).** Bij de eerste start vraagt Claude of je ze wil (`"cutChecks"` in `config.json`, later aan/uit te zetten met "extra controles aan/uit"):
+>   - `islands.py` knipt elke clip op zijn stiltes en luistert elk stukje apart, zodat euh's, geluidjes, valse starts en gesproken notities ("foutje, dit mag eruit", "nee, ...") als voorstel in de knip-lijst komen;
+>   - `lint_edl.py` controleert elk knippunt: een eindpunt zonder stille dip tussen twee woorden knipt een klank af;
+>   - `check_cuts.py --strip` maakt per cut een filmstrook met geluidsgolf en meet duur en volume (Reels: ongeveer -14 LUFS).
+>   Afgesteld op één echte reel en op het oor: soms iets te streng. Feedback is welkom via Issues.
 > - Getest op Windows 11 met een 8K-clip van een gsm.
 >
 > Installeren: plak in Claude Code `Install this skill for me: https://github.com/thanthalis/video-edit-skill` en typ daarna `/video-edit`.

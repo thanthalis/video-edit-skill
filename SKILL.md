@@ -29,7 +29,8 @@ Look for `SK/config.json`.
 
 **If it exists:** load it (name, instagram handle, default look, folders), run the setup script exactly as in
 step 3 below (a few seconds: it only checks, and repairs the environment after an update), read "This machine",
-and go to Step 1 once it prints READY.
+and go to Step 1 once it prints READY. If config.json has no `cutChecks` key yet (installed before it existed), ask
+the extra-checks question from step 7 below once, save the answer, then continue.
 
 **If it does not exist:**
 1. Say: "Welcome to /video-edit! Let's get you set up. This takes about 2 minutes and only happens once."
@@ -63,7 +64,7 @@ and go to Step 1 once it prints READY.
 5. Save `SK/config.json` (no secrets, ever):
    ```json
    {"name": "...", "instagram": "handle-without-@", "defaultLook": "bold", "clipsDir": "~/Downloads",
-    "projectsDir": "~/reel-edits", "language": "nl", "approvalGates": true, "setupComplete": true, "setupDate": "YYYY-MM-DD"}
+    "projectsDir": "~/reel-edits", "language": "nl", "approvalGates": true, "cutChecks": true, "setupComplete": true, "setupDate": "YYYY-MM-DD"}
    ```
 6. **Your own style (optional, recommended).** Say that the three looks are a starting point and that the edit gets
    much better with the user's own style pattern. Offer three choices: make it now, after the first reel, or skip.
@@ -78,7 +79,12 @@ and go to Step 1 once it prints READY.
      Never copy another creator's identity; describe the user's own.
    - Optionally suggest saving the same rules as a design system in Claude Design so other Claude surfaces use them.
    - After the first approved reel, offer to save its build as `SK/looks/<name>/build.py` and point house-rules to it.
-7. Say: "Setup complete! Running /video-edit now..." and continue.
+7. **Extra cut checks (optional, new).** Ask once, in plain words: "Do you want me to check extra for clipped words,
+   leftover 'euh's and audio that is too quiet? It is new and can sometimes be a bit strict. (yes / no)". Save the
+   answer as `"cutChecks": true` or `false` and never ask again. The user can switch it any time ("extra checks on/off",
+   "extra controles aan/uit"). With `false` the skill runs exactly as before: skip islands.py, lint_edl.py and
+   `check_cuts.py --strip` (the plain `check_cuts.py` sheet always runs).
+8. Say: "Setup complete! Running /video-edit now..." and continue.
 
 ## This machine (read on every run)
 
@@ -131,7 +137,7 @@ written in that language too. Whisper mangles Flemish names and brands: always p
 PY SK/scripts/ingest.py <project> <clips or folder> [--newest 5]
 ```
 Look at `work/sheets.jpg` (setups and angles) and read `transcript.txt` (per-clip lines, words with times, speech map).
-Then per clip (local patch): `PY SK/scripts/islands.py <project> <clip> "<names>"` splits the clip at its silences and
+With `cutChecks` true, per clip (local patch): `PY SK/scripts/islands.py <project> <clip> "<names>"` splits the clip at its silences and
 transcribes each island alone (fillers kept). `work/takes_<clip>.tsv` proposes keep / CUT (no speech, fillers only, false
 start) / CHECK (retake, filler inside) per island. Use it to pick takes; show the CUT/CHECK rows in the gate-1 table.
 
@@ -145,7 +151,7 @@ start) / CHECK (retake, filler inside) per island. Use it to pick takes; show th
 - Unsure words (keyword, CTA trigger): re-transcribe that snippet with the model from `skillenv.whisper_settings('cut')` and a prompt containing the names.
 - Format: `[{"id": "hook", "clip": "c1", "in": 12.66, "out": 15.72, "zoom": 1.0, "cx": 0.5, "cy": 0.5, "line": "..."}]`
 - Post the EDL to the user as a short table (line kept, what is cut and why, clip, look per section).
-- Before posting it, run `PY SK/scripts/lint_edl.py <project>`: every in/out must sit in a pause or in the dip between
+- With `cutChecks` true, before posting it, run `PY SK/scripts/lint_edl.py <project>`: every in/out must sit in a pause or in the dip between
   two words (10 dB+ under the clip's speech median). OK / CHECK (a dip is within 60 ms: move the point there) / UNSAFE
   (no dip: the cut chops a sound; move it or cut the two-word phrase differently). Fast talkers rarely leave 0.4s
   pauses, so a word-gap dip is a valid cut point; a long-silence rule flagged 16 of 20 approved cuts on the test reel.
@@ -201,7 +207,7 @@ PY build.py           # without --safe
 HF render -o renders/<slug>-vN.mp4 --quality high --sdr   # ~1.5-2 min for a 25s reel on Apple Silicon (--sdr: see gotchas, Windows)
 PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --phone
 ```
-Then `PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --strip` (local patch): `work/cut_strips.jpg` has one
+With `cutChecks` true, then `PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --strip` (local patch): `work/cut_strips.jpg` has one
 row per cut (6 frames over -1.5..+1.5s, waveform below, cut = red line) plus the first and last 2s, and it prints
 duration vs cut list and loudness. Hand the strip to a critic sub-agent whose only job is to find problems (clipped
 word in the waveform, jump in framing, leftover caption, frozen frame, silence gap, blink-cut mid-word). Fix and
