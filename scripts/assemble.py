@@ -49,7 +49,7 @@ def frames(f):
 
 def main():
     skillenv.utf8_stdio()
-    proj = skillenv.path_arg(sys.argv[1])
+    proj = os.path.abspath(skillenv.path_arg(sys.argv[1]))   # ffmpeg runs with cwd=work, so no relative paths
     work, assets = os.path.join(proj, 'work'), os.path.join(proj, 'assets')
     with open(os.path.join(proj, 'sources.json'), encoding='utf-8') as fh:
         src = json.load(fh)
@@ -90,15 +90,21 @@ def main():
         fh.write(''.join(skillenv.concat_entry(os.path.basename(p)) for p in parts))
     # local patch: the concat FILTER decodes every segment on its own. The concat demuxer silently dropped a whole
     # segment (133 frames) when clips from two phones/settings were mixed (different HDR/colour headers).
+    # local patch (lip sync): after an input seek some segments start their video at 0.033s while the audio starts at 0.
+    # The concat filter then pads that segment's audio to the late video end, but setpts=N/30 squeezes the video back,
+    # so the voice fell one frame further behind the lips at every such join (166 ms by the end of a 10-cut test reel,
+    # 270 ms on another). Start both streams of every part at 0 and make the audio exactly n frames long.
+    nfr = [frames(p) for p in parts]
     ins = sum((['-i', os.path.basename(p)] for p in parts), [])
-    graph = ''.join(f'[{k}:v:0][{k}:a:0]' for k in range(len(parts))) + f'concat=n={len(parts)}:v=1:a=1[v][a];[v]setpts=N/30/TB[vo]'
+    graph = ''.join(f'[{k}:v:0]setpts=PTS-STARTPTS[v{k}];[{k}:a:0]asetpts=PTS-STARTPTS,apad,atrim=end={n / 30:.6f}[a{k}];'
+                    for k, n in enumerate(nfr))
+    graph += ''.join(f'[v{k}][a{k}]' for k in range(len(parts))) + f'concat=n={len(parts)}:v=1:a=1[v][a];[v]setpts=N/30/TB[vo]'
     subprocess.run([FF, '-loglevel', 'error', '-y', *ins, '-filter_complex', graph, '-map', '[vo]', '-map', '[a]',
                     '-r', '30', '-fps_mode', 'cfr',
                     '-c:v', 'libx264', '-crf', '14', '-preset', 'medium', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p',
                     '-c:a', 'aac', '-b:a', '192k', aroll], check=True, cwd=work)
     fr = 0
-    for k, m in enumerate(meta):
-        n = frames(parts[k])
+    for m, n in zip(meta, nfr):
         m['frame'], m['frames'] = fr, n
         fr += n
     with open(os.path.join(proj, 'segments.json'), 'w', encoding='utf-8') as fh:

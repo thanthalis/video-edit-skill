@@ -5,7 +5,7 @@ description: "Turns raw 9:16 talking-head clips into a finished, premium Instagr
 
 # /video-edit
 
-Raw clips in, finished reel out. The user never opens an editor: they review a phone copy and give notes; every
+Raw clips in, finished reel out. The user never opens an editor: they review the render and give notes; every
 round is a ~2 minute re-render.
 
 **House rules first (every run).** If `SK/house-rules.md` exists, read it before anything else: it is the user's own
@@ -205,7 +205,7 @@ and WAIT for their OK before the full render.
 ```bash
 PY build.py           # without --safe
 HF render -o renders/<slug>-vN.mp4 --quality high --sdr   # ~1.5-2 min for a 25s reel on Apple Silicon (--sdr: see gotchas, Windows)
-PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --phone
+PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4
 ```
 With `cutChecks` true, then `PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --strip` (local patch): `work/cut_strips.jpg` has one
 row per cut (6 frames over -1.5..+1.5s, waveform below, cut = red line) plus the first and last 2s, and it prints
@@ -217,7 +217,8 @@ Look at `work/cut_check.jpg`: every after-cut frame shows the new shot cleanly. 
 max around -2 to -5 dB) and the silence at section joins.
 
 ### 8. Deliver
-Send or point to the phone copy (720p) and the full-quality render. Report in plain terms what changed and anything
+Deliver ONE file: the full-quality 1080x1920 render (Instagram recompresses it anyway). Make a light 720p copy only when
+the user asks for one, e.g. to send it to their phone (`check_cuts.py ... --phone`). Report in plain terms what changed and anything
 that needs the user's call. Keep every version in `renders/`; back up `assets/` + `segments.json` to `work/vN/` before
 re-assembling.
 
