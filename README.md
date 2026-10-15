@@ -18,6 +18,9 @@
 >   - `lint_edl.py` controleert elk knippunt: een eindpunt zonder stille dip tussen twee woorden knipt een klank af;
 >   - `check_cuts.py --strip` maakt per cut een filmstrook met geluidsgolf en meet duur en volume (Reels: ongeveer -14 LUFS).
 >   Afgesteld op één echte reel en op het oor: soms iets te streng. Feedback is welkom via Issues.
+> - **Ondertitels naar keuze.** Bij de eerste start kies je **mix** (aanbevolen: elk woord als rustige ondertitel + één groot kernwoord op de sterke momenten), **volledig** of **enkel kernwoorden** (de originele looks). Heb je al een huisstijl voor ondertitels (lettertype, grootte, kleuren, achtergrond), dan vraagt Claude die één keer uit. Module: `assets/template/captions.py`.
+> - **Volume op Reels-niveau.** `loudness.py` brengt elke render naar ongeveer -14 LUFS (true peak onder -1 dBTP), raakt het beeld niet aan en vervangt de render alleen door een betere versie.
+> - **Lipsync-fix** bij het samenvoegen en **leesbaarheidsregels** (tekst minstens 34 px, ondertitels breken nooit midden in een woord).
 > - Getest op Windows 11 met een 8K-clip van een gsm.
 >
 > Installeren: plak in Claude Code `Install this skill for me: https://github.com/thanthalis/video-edit-skill` en typ daarna `/video-edit`.

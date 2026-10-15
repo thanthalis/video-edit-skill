@@ -58,6 +58,27 @@ NOTES = ('foutje', 'mag eruit', 'mag er uit', 'mag ik er', 'knip dit', 'opnieuw'
 CORRECTION = re.compile(r'(^|[.,!?] )(nee|neen|no|wacht|wait)[,.!] ', re.I)
 
 
+# Whisper "hears" subtitle credits in near-silence (seen on a real reel: "Closed Captioning by GetTranscribed.com" on three
+# breath/click islands). Any island whose text contains one of these is noise, never speech.
+HALLUCINATIONS = ('closed captioning', 'captioning by', 'gettranscribed', 'transcribed by', 'ondertiteling', 'ondertiteld door',
+                  'bedankt voor het kijken', 'thanks for watching', 'subtitles by', 'amara.org', 'tv gelderland')
+
+
+def hallucination(words):
+    text = ' '.join(w['text'] for w in words).lower()
+    hit = next((h for h in HALLUCINATIONS if h in text), None)
+    if hit:
+        return hit
+    # Whisper's other habit in near-silence: one word or phrase looped ("thank you, thank you, thank you, ...")
+    toks = [re.sub(r'[^\w]', '', w['text'].lower()) for w in words]
+    toks = [t for t in toks if t]
+    for n in (1, 2):
+        grams = [' '.join(toks[k:k + n]) for k in range(0, len(toks) - n + 1, n)]
+        if len(grams) >= 3 and len(set(grams)) == 1:
+            return f'"{grams[0]}" repeated'
+    return None
+
+
 def speech(words):
     """Whisper writes noises as *clap*, [music], (laughs): those are not speech."""
     return [w for w in words if w['text'].strip()[:1] not in '*[(' and w['text'].strip('*.[]() ')]
@@ -82,6 +103,7 @@ def main():
         subprocess.run([skillenv.tool('ffmpeg'), '-loglevel', 'error', '-y', '-i', src, '-vn', '-ac', '1', '-ar', '16000', wav], check=True)
 
     from faster_whisper import WhisperModel, decode_audio
+    import numpy as np
     audio = decode_audio(wav, sampling_rate=16000)
     total = len(audio) / 16000
     sil, noise = silences(audio, min_sil, noise)
@@ -113,6 +135,18 @@ def main():
     for k, i in enumerate(isl):
         i['words'] = speech(i['words'])
         ws = norm(i['words'])
+        hal = hallucination(i['words'])
+        if hal:
+            # Whisper "captions" breaths and clicks; real speech (an outro: "bedankt voor het kijken") is loud.
+            # Only an island whose loudest 20 ms stays near the silence threshold is noise; anything else stays CHECK.
+            seg = audio[int(i['start'] * 16000):int(i['end'] * 16000)]
+            n = len(seg) // 320
+            peak_db = float(20 * np.log10(np.sqrt(np.mean(seg[:n * 320].reshape(n, 320) ** 2, axis=1) + 1e-12)).max()) if n else -120.0
+            if peak_db < noise + 12:
+                i['words'], i['verdict'], i['why'] = [], 'CUT', f'Whisper hallucination in near-silence ("{hal}", peak {peak_db:.0f} dB)'
+            else:
+                i['verdict'], i['why'] = 'CHECK', f'sounds like a Whisper hallucination ("{hal}"), but it has voice level: listen'
+            continue
         content = [w for w in ws if w not in FILLERS]
         i['verdict'], i['why'] = 'keep', ''
         if not ws:

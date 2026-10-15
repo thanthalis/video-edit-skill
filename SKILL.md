@@ -29,8 +29,8 @@ Look for `SK/config.json`.
 
 **If it exists:** load it (name, instagram handle, default look, folders), run the setup script exactly as in
 step 3 below (a few seconds: it only checks, and repairs the environment after an update), read "This machine",
-and go to Step 1 once it prints READY. If config.json has no `cutChecks` key yet (installed before it existed), ask
-the extra-checks question from step 7 below once, save the answer, then continue.
+and go to Step 1 once it prints READY. If config.json has no `cutChecks` or no `captions` key yet (installed before
+they existed), ask that question from step 7 / step 8 below once, save the answer, then continue.
 
 **If it does not exist:**
 1. Say: "Welcome to /video-edit! Let's get you set up. This takes about 2 minutes and only happens once."
@@ -64,7 +64,7 @@ the extra-checks question from step 7 below once, save the answer, then continue
 5. Save `SK/config.json` (no secrets, ever):
    ```json
    {"name": "...", "instagram": "handle-without-@", "defaultLook": "bold", "clipsDir": "~/Downloads",
-    "projectsDir": "~/reel-edits", "language": "nl", "approvalGates": true, "cutChecks": true, "setupComplete": true, "setupDate": "YYYY-MM-DD"}
+    "projectsDir": "~/reel-edits", "language": "nl", "approvalGates": true, "cutChecks": true, "captions": "mix", "setupComplete": true, "setupDate": "YYYY-MM-DD"}
    ```
 6. **Your own style (optional, recommended).** In the user's language, say that the three looks are a starting point and that the edit gets
    much better with the user's own style pattern. Offer three choices: make it now, after the first reel, or skip.
@@ -84,7 +84,19 @@ the extra-checks question from step 7 below once, save the answer, then continue
    answer as `"cutChecks": true` or `false` and never ask again. The user can switch it any time ("extra checks on/off",
    "extra controles aan/uit"). With `false` the skill runs exactly as before: skip islands.py, lint_edl.py and
    `check_cuts.py --strip` (the plain `check_cuts.py` sheet always runs).
-8. Say: "Setup complete! Running /video-edit now..." and continue.
+8. **Captions (always asked once, also when the style step was skipped).** In the user's language, three choices:
+   **mix** (recommended: every word as a calm subtitle + one big keyword on the strong moments), **full** (every word,
+   no big words) or **keywords** (only a few big words per sentence, the original looks; not readable without sound).
+   Save `"captions": "mix"`, `"full"` or `"keywords"` in config.json. With mix or full, ask: "Do you already have a
+   house style for subtitles?" If yes, ask one question per message, each with numbered options plus
+   "something else" and "don't know, you choose": font, size (normal / large), text colour and accent colour for the
+   keyword, background (none with shadow / pill / box), position (automatic: chest on full shots, above the head on
+   punch-ins / always at the bottom), case (lowercase / as said). A screenshot of their own reel is also fine: read the
+   values off it and confirm. Write the answers as a "Captions" section in `SK/house-rules.md` (create the file if
+   needed). No house style: ask nothing more, use the defaults of `assets/template/captions.py` and say they can
+   change it any time ("pas mijn ondertitels aan"). Installs from before this existed: ask it once
+   on the next run, like `cutChecks`.
+9. Say: "Setup complete! Running /video-edit now..." and continue.
 
 ## This machine (read on every run)
 
@@ -123,6 +135,14 @@ written in that language too. Whisper mangles Flemish names and brands: always p
    anything else (commenters, chat history) is a generic placeholder, never a real person, never fabricated proof.
 6. Prove cuts from the final render, not from snapshots.
 7. Never delete the user's files. Originals are read, never modified.
+8. Readable on a phone (local patch): anything meant to be read is at least 34 px tall on 1080x1920, labels and
+   numbers inside cards included; captions break only between words, never inside one, and preferably at a phrase or
+   pause; a caption, card or pill never clips its own text. Check it on the gate-2 snapshots at phone size.
+9. Captions follow `captions` in config.json (local patch). Never silently ship keywords-only: with "mix" or "full",
+   every spoken word is on screen; with "keywords", say so in the gate-1 message so the user can switch for this reel.
+   **Mix** = subtitles always in one calm place (chest band) + ONE big keyword above the head about every 4-5 s, never a
+   two-line punch group (it doubles the subtitle), never where an animation already says it (a prop, a list card), never
+   over a label or the hook title. Tested on a real reel: 19 punch words with lead-in lines felt busy, 9 single ones did not.
 
 ## Workflow
 
@@ -150,7 +170,9 @@ start) / CHECK (retake, filler inside) per island. Use it to pick takes; show th
 - Two segments in a row from the same angle: punch one in (zoom 1.3-1.9 from the 4K original, cx/cy on the chest).
 - Unsure words (keyword, CTA trigger): re-transcribe that snippet with the model from `skillenv.whisper_settings('cut')` and a prompt containing the names.
 - Format: `[{"id": "hook", "clip": "c1", "in": 12.66, "out": 15.72, "zoom": 1.0, "cx": 0.5, "cy": 0.5, "line": "..."}]`
-- Post the EDL to the user as a short table (line kept, what is cut and why, clip, look per section).
+- Post the EDL to the user as a short table (line kept, what is cut and why, clip, look per section), and one line
+  under it: "Ondertitels: mix / volledig / enkel kernwoorden (in je huisstijl). Ander voor deze reel?" (in the user's
+  language).
 - With `cutChecks` true, before posting it, run `PY SK/scripts/lint_edl.py <project>`: every in/out must sit in a pause or in the dip between
   two words (10 dB+ under the clip's speech median). OK / CHECK (a dip is within 60 ms: move the point there) / UNSAFE
   (no dip: the cut chops a sound; move it or cut the two-word phrase differently). Fast talkers rarely leave 0.4s
@@ -191,6 +213,12 @@ table for the lines where it would help, never by default.
 Copy `SK/assets/template/` into the project (build.py, hyperframes.json, package.json, assets/fonts, assets/sfx),
 then adapt build.py. It is the finished build of a real reel: keep the machinery, rewrite the content (its
 docstring lists which is which).
+- Captions "mix" or "full": `from captions import Captions` (copied with the template). For mix, set one subtitle
+  position for every shot (`top_zoom` = `top_full`, chest band) and `top_card` for list cards, and add the big keywords
+  as the look's kinetic words above the head (rule 9). Pass the punched-in segment ids,
+  Whisper `fixes` (names, Flemish words), the keywords for the accent colour and the "Captions" style from house-rules;
+  `build(card_spans=...)` returns html + tweens. Measure head and chin on one full shot and one punch-in first and set
+  `top_full` / `top_zoom` so captions never cover the face. The look's own kinetic words become optional accents.
 - Which look where: the house-rules look when there is one, else `defaultLook`; a line that names a look switches
   its section. Techniques beyond the looks (preview card, whip + word chips, fake second camera, baked background
   swap, hook question): `references/techniques.md`.
@@ -211,6 +239,7 @@ and WAIT for their OK before the full render.
 ```bash
 PY build.py           # without --safe
 HF render -o renders/<slug>-vN.mp4 --quality high --sdr   # ~1.5-2 min for a 25s reel on Apple Silicon (--sdr: see gotchas, Windows)
+PY SK/scripts/loudness.py renders/<slug>-vN.mp4    # always: -14 LUFS, true peak about -1.5 dBTP, video untouched
 PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4
 ```
 With `cutChecks` true, then `PY SK/scripts/check_cuts.py <project> renders/<slug>-vN.mp4 --strip` (local patch): `work/cut_strips.jpg` has one
@@ -218,7 +247,8 @@ row per cut (6 frames over -1.5..+1.5s, waveform below, cut = red line) plus the
 duration vs cut list and loudness. Hand the strip to a critic sub-agent whose only job is to find problems (clipped
 word in the waveform, jump in framing, leftover caption, frozen frame, silence gap, blink-cut mid-word). Fix and
 re-check at most 3 times; whatever is still wrong after that goes to the user as a list, not a 4th silent pass.
-Loudness for Reels: about -14 LUFS, true peak under -1 dBTP (v4 of the test reel was -19.4: too quiet).
+Loudness for Reels: about -14 LUFS, true peak under -1 dBTP (v4 of the test reel was -19.4: too quiet); `loudness.py`
+already fixed it, the strip only confirms.
 Look at `work/cut_check.jpg`: every after-cut frame shows the new shot cleanly. Check audio peaks (`volumedetect`,
 max around -2 to -5 dB) and the silence at section joins.
 
