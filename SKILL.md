@@ -155,6 +155,9 @@ start) / CHECK (retake, filler inside) per island. Use it to pick takes; show th
   two words (10 dB+ under the clip's speech median). OK / CHECK (a dip is within 60 ms: move the point there) / UNSAFE
   (no dip: the cut chops a sound; move it or cut the two-word phrase differently). Fast talkers rarely leave 0.4s
   pauses, so a word-gap dip is a valid cut point; a long-silence rule flagged 16 of 20 approved cuts on the test reel.
+  When there are CHECK points with a dip, offer in the gate-1 message: "Shall I move these N cuts onto the nearest
+  pause?" On yes: `PY SK/scripts/lint_edl.py <project> --fix` (moves only those, never into the neighbouring segment,
+  keeps the old EDL in `work/edl_before_fix.json`), then list what moved. UNSAFE points stay a question for the user.
   **Approval gate 1 (local patch):** if `approvalGates` in config.json is true (the default when missing), WAIT for
   the user's OK before assembling. If it is false, keep going without waiting.
 
@@ -180,6 +183,9 @@ If a line's last or first word is missing, move that in/out to the next real sil
 For each animated insert the script calls for (an app on screen, the profile follow on the CTA, a file scroll),
 spawn a sub-agent in the background with the brief template in `references/overlays.md`: fixed size, fixed
 duration, beats locked to the word times, transparent webm out. Keep building the main edit while they work.
+Extra footage the talking head cannot show (stock, a short generated clip, music on request): optional, via ChatCut as
+a supplier only, always asking before credits are spent. Rules in `references/chatcut.md`; suggest it in the cut-list
+table for the lines where it would help, never by default.
 
 ### 6. Build
 Copy `SK/assets/template/` into the project (build.py, hyperframes.json, package.json, assets/fonts, assets/sfx),
